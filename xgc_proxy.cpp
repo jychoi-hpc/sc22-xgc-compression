@@ -15,7 +15,7 @@
 
 static void show_usage(std::string name)
 {
-    std::cerr << "Usage: " << name << " EXPDIR NP_PER_PLANE ISTEP NSTEP INC SLEEP_SEC" << std::endl;
+    std::cerr << "Usage: " << name << " EXPDIR NP_PER_PLANE BSTEP ESTEP INC SLEEP_SEC" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
 
     std::string expdir = argv[1];
     int np_per_plane = atoi(argv[2]); // number of PEs per plane
-    int istep = atoi(argv[3]);        // start step index
-    int nstep = atoi(argv[4]);        // end step index
+    int bstep = atoi(argv[3]);        // start step index
+    int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
 
@@ -47,8 +47,8 @@ int main(int argc, char *argv[])
     {
         printf("expdir: %s\n", expdir.data());
         printf("np_per_plane: %d\n", np_per_plane);
-        printf("istep: %d\n", istep);
-        printf("nstep: %d\n", nstep);
+        printf("bstep: %d\n", bstep);
+        printf("estep: %d\n", estep);
         printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
     }
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     io = ad.DeclareIO("reader");
 
     char filename[50];
-    for (int i = istep; i < istep + nstep; i += inc)
+    for (int i = bstep; i < estep; i += inc)
     {
         // Step #1: Read original XGC data
         sprintf(filename, "%s/restart_dir/xgc.f0.%05d.bp", expdir.data(), i);
