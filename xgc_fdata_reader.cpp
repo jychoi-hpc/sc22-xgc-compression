@@ -64,8 +64,6 @@ int main(int argc, char *argv[])
     while (true)
     {
         ++i;
-        if (rank == 0)
-            printf("%d: Reading xgc.f0.bp step: %d\n", rank, i);
         adios2::StepStatus status = reader.BeginStep();
         if (status != adios2::StepStatus::OK)
         {
@@ -74,6 +72,9 @@ int main(int argc, char *argv[])
             break;
         }
 
+        if (rank == 0)
+            printf("%d: Reading xgc.f0.bp step: %d\n", rank, i);
+            
         // Step #1: Read XGC data from xgc_proxy
         auto var_i_f = io.InquireVariable<double>("i_f");
         nphi = var_i_f.Shape()[0];
