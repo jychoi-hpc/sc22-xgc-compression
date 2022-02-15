@@ -106,9 +106,13 @@ int main(int argc, char *argv[])
         */
 
         // Step #2: Simulate computation
-        if (rank == 0)
-            printf("%d: Computation: %d seconds\n", rank, sleep_sec);
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
+        int interval = 10;
+        for (int k = sleep_sec; k > 0; k = k - interval)
+        {
+            if (rank == 0)
+                printf("%d: Computation: %d seconds left.\n", rank, k);
+            std::this_thread::sleep_for(std::chrono::seconds(interval));
+        }
 
         // Step #3: Write f-data
         if (rank == 0)
