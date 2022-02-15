@@ -1,5 +1,8 @@
+#include <chrono>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <unistd.h>
 #include <vector>
 
 #include <assert.h>
@@ -12,7 +15,7 @@
 
 static void show_usage(std::string name)
 {
-    std::cerr << "Usage: " << name << " EXPDIR NPHI NP ISTEP NSTEP INC" << std::endl;
+    std::cerr << "Usage: " << name << " NP_PER_PLANE" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -23,38 +26,29 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
-    printf("rank,size: %d %d\n", rank, size);
+    if (rank == 0)
+        printf("rank,size: %d %d\n", rank, size);
 
-    if (argc < 7)
+    if (argc < 2)
     {
-        show_usage(argv[0]);
+        if (rank == 0)
+            show_usage(argv[0]);
         return 1;
     }
 
-    std::string expdir = argv[1];
-    int nphi = atoi(argv[2]);  // number of planes
-    int np = atoi(argv[3]);    // number of PEs per plane
-    int istep = atoi(argv[4]); // start step index
-    int nstep = atoi(argv[5]); // end step index
-    int inc = atoi(argv[6]);   // inc
+    int np_per_plane = atoi(argv[1]); // number of PEs per plane
 
     if (rank == 0)
     {
-        printf("expdir: %s\n", expdir.data());
-        printf("nphi: %d\n", nphi);
-        printf("np: %d\n", np);
-        printf("istep: %d\n", istep);
-        printf("nstep: %d\n", nstep);
-        printf("inc: %d\n", inc);
+        printf("np_per_plane: %d\n", np_per_plane);
     }
     MPI_Barrier(comm);
 
-    int iphi = rank / np;       // plane index
-    int plane_rank = rank % np; // rank in plane
-    printf("%d: iphi, plane_rank: %d %d\n", rank, iphi, plane_rank);
+    long unsigned int nphi = 0;                   // number of planes (will be set after reading)
+    long unsigned int iphi = rank / np_per_plane; // plane index
+    int plane_rank = rank % np_per_plane;         // rank in plane
+    // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
-
-    assert(size == nphi * np);
 
     adios2::ADIOS ad(comm);
     adios2::IO io;
@@ -65,33 +59,39 @@ int main(int argc, char *argv[])
 
     io = ad.DeclareIO("reader");
 
-    char filename[50];
-    for (int i = istep; i < istep + nstep; i += inc)
+    int i = 0;
+    reader = io.Open("xgc.f0.bp", adios2::Mode::Read, comm);
+    while (true)
     {
-        sprintf(filename, "%s/restart_dir/xgc.f0.%05d.bp", expdir.data(), i);
-        printf("%d: filename: %s\n", rank, filename);
+        ++i;
+        if (rank == 0)
+            printf("%d: Reading xgc.f0.bp step: %d\n", rank, i);
+        adios2::StepStatus status = reader.BeginStep();
+        if (status != adios2::StepStatus::OK)
+        {
+            if (rank == 0)
+                printf("%d: No more data. Stop\n", rank);
+            break;
+        }
 
-        reader = io.Open(filename, adios2::Mode::Read, comm);
+        // Step #1: Read XGC data from xgc_proxy
         auto var_i_f = io.InquireVariable<double>("i_f");
+        nphi = var_i_f.Shape()[0];
+        assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
+        long unsigned int nvp = var_i_f.Shape()[1];
+        long unsigned int nnodes = var_i_f.Shape()[2];
+        long unsigned int nmu = var_i_f.Shape()[3];
 
-        assert(nphi == var_i_f.Shape()[0]);
-        int nvp = var_i_f.Shape()[1];
-        int nnodes = var_i_f.Shape()[2];
-        int nmu = var_i_f.Shape()[3];
-
-        int l_nnodes = nnodes / np;
-        int l_offset = plane_rank * l_nnodes;
-        if ((plane_rank % np) == (np - 1))
-            l_nnodes = l_nnodes + nnodes % np;
-        // printf("%d: nnodes, l_offset, l_nnodes: %d %d\n", rank, nnodes, l_offset, l_nnodes);
-
-        printf("%d: iphi, l_offset, l_nnodes: %d %d %d\n", rank, iphi, l_offset, l_nnodes);
+        long unsigned int l_nnodes = nnodes / np_per_plane;
+        long unsigned int l_offset = plane_rank * l_nnodes;
+        if ((plane_rank % np_per_plane) == (np_per_plane - 1))
+            l_nnodes = l_nnodes + nnodes % np_per_plane;
+        // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
 
         std::vector<double> i_f;
         reader.Get<double>(var_i_f, i_f);
-
-        reader.Close();
+        reader.EndStep();
 
         /*
         for (int i = 0; i < nvp; i++)
@@ -101,16 +101,18 @@ int main(int argc, char *argv[])
         j, k)); break; break; break;
         */
 
-        // Writing back for debugg
+        // Step #2: do computation (compression and decompression, QoIs, etc)
+
+        // Step #3: Write something
+        if (rank == 0)
+            printf("%d: Writing: out.bp\n", rank);
         static bool first = true;
         if (first)
         {
             wio = ad.DeclareIO("writer");
             wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
-
-            writer = wio.Open("dump.bp", adios2::Mode::Write, comm);
-
+            writer = wio.Open("out.bp", adios2::Mode::Write, comm);
             first = false;
         }
 
@@ -118,8 +120,12 @@ int main(int argc, char *argv[])
         auto var = wio.InquireVariable<double>("i_f");
         writer.Put<double>(var, i_f.data());
         writer.EndStep();
+
+        if (rank == 0)
+            printf("%d: Finished step %d\n", rank, i);
     }
 
+    reader.Close();
     writer.Close();
     MPI_Barrier(comm);
     MPI_Finalize();

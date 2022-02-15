@@ -9,3 +9,9 @@ This is to demostrate XGC data compression workflow.
 (N processes)                (M processes)
 ```
 
+## Command line example
+
+```
+jsrun -n $((8*48)) -c7 -g1 -r6 -brs xgc_proxy d3d_coarse_v2 48 420 10 1 60
+jsrun -n $((8*2)) -c7 -g1 -r6 -brs xgc_fdata_reader 2
+```
