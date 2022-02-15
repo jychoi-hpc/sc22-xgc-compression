@@ -1,4 +1,4 @@
-# XGC compression proxy
+# XGC compression workflow
 
 This is to demostrate XGC data compression workflow.
 
