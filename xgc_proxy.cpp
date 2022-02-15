@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 
         // Step #3: Write f-data
         if (rank == 0)
-            printf("%d: Writing: xgc.f0.bp\n");
+            printf("%d: Writing: xgc.f0.bp\n", rank);
         static bool first = true;
         if (first)
         {
