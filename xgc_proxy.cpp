@@ -12,6 +12,9 @@
 
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
+#define GET4D(X, d0, d1, d2, d3, i, j, k, l) X[(d1 + d2 + d3) * i + (d2 + d3) * j + d3 * k + l]
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static void show_usage(std::string name)
 {
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
         {
             if (rank == 0)
                 printf("%d: Computation: %d seconds left.\n", rank, k);
-            std::this_thread::sleep_for(std::chrono::seconds(interval));
+            std::this_thread::sleep_for(std::chrono::seconds(MIN(k, interval)));
         }
 
         // Step #3: Write f-data
