@@ -124,9 +124,10 @@ int main(int argc, char *argv[])
         if (first)
         {
             wio = ad.DeclareIO("writer");
-            wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
+            auto var = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
-
+            // add operator
+            var.AddOperation("mgardplus",{{"accuracy","0.01"}});
             writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
 
             first = false;
