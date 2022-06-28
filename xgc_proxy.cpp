@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
-    int nnodes = 0;                   // user defined l_nnodes
+    int nnodes = 0;                   // user defined nnodes (optional)
     if (argc > 7)
         nnodes = atoi(argv[7]);
 
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         long unsigned int l_offset = plane_rank * l_nnodes;
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
-        // use user-profied nnodes
+        // use user-defined nnodes if specified
         if (nnodes > 0)
         {
             l_nnodes = nnodes;
