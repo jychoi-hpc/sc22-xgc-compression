@@ -18,7 +18,7 @@
 
 static void show_usage(std::string name)
 {
-    std::cerr << "Usage: " << name << " EXPDIR NP_PER_PLANE BSTEP ESTEP INC SLEEP_SEC" << std::endl;
+    std::cerr << "Usage: " << name << " EXPDIR NP_PER_PLANE BSTEP ESTEP INC SLEEP_SEC [NNODES]" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -45,6 +45,9 @@ int main(int argc, char *argv[])
     int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
+    int nnodes = 0;                   // user defined l_nnodes
+    if (argc > 7)
+        nnodes = atoi(argv[7]);
 
     if (rank == 0)
     {
@@ -54,6 +57,7 @@ int main(int argc, char *argv[])
         printf("estep: %d\n", estep);
         printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
+        printf("nnodes: %d\n", nnodes);
     }
     MPI_Barrier(comm);
 
@@ -93,6 +97,12 @@ int main(int argc, char *argv[])
         long unsigned int l_offset = plane_rank * l_nnodes;
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
+        // use user-profied nnodes
+        if (nnodes > 0)
+        {
+            l_nnodes = nnodes;
+            l_offset = plane_rank * l_nnodes;
+        }
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
 
