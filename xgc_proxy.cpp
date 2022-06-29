@@ -45,9 +45,9 @@ int main(int argc, char *argv[])
     int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
-    int nnodes = 0;                   // user defined nnodes (optional)
+    int user_nnodes = 0; // user defined nnodes (optional)
     if (argc > 7)
-        nnodes = atoi(argv[7]);
+        user_nnodes = atoi(argv[7]);
 
     if (rank == 0)
     {
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
         printf("estep: %d\n", estep);
         printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
-        printf("nnodes: %d\n", nnodes);
+        printf("user_nnodes: %d\n", user_nnodes);
     }
     MPI_Barrier(comm);
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         nphi = var_i_f.Shape()[0];
         assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
         long unsigned int nvp = var_i_f.Shape()[1];
-        // long unsigned int nnodes = var_i_f.Shape()[2];
+        long unsigned int nnodes = var_i_f.Shape()[2];
         long unsigned int nmu = var_i_f.Shape()[3];
 
         long unsigned int l_nnodes = nnodes / np_per_plane;
@@ -98,11 +98,11 @@ int main(int argc, char *argv[])
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
         // use user-defined nnodes if specified
-        // if (nnodes > 0)
-        // {
-            // l_nnodes = nnodes;
-            // l_offset = plane_rank * l_nnodes;
-        // }
+        if (user_nnodes > 0)
+        {
+            l_nnodes = user_nnodes;
+            l_offset = plane_rank * l_nnodes;
+        }
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
 
