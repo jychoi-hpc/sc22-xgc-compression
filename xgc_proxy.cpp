@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         nphi = var_i_f.Shape()[0];
         assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
         long unsigned int nvp = var_i_f.Shape()[1];
-        long unsigned int nnodes = var_i_f.Shape()[2];
+        // long unsigned int nnodes = var_i_f.Shape()[2];
         long unsigned int nmu = var_i_f.Shape()[3];
 
         long unsigned int l_nnodes = nnodes / np_per_plane;
@@ -98,11 +98,11 @@ int main(int argc, char *argv[])
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
         // use user-defined nnodes if specified
-        if (nnodes > 0)
-        {
-            l_nnodes = nnodes;
-            l_offset = plane_rank * l_nnodes;
-        }
+        // if (nnodes > 0)
+        // {
+            // l_nnodes = nnodes;
+            // l_offset = plane_rank * l_nnodes;
+        // }
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
             auto var = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
             // add operator
-            var.AddOperation("mgardplus",{{"accuracy","0.01"}});
+            var.AddOperation("mgardplus",{{"accuracy","0.01"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "0"}});
             writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
 
             first = false;
