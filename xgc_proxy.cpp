@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
         {
             l_nnodes = user_nnodes;
             l_offset = plane_rank * l_nnodes;
+            nnodes = size * user_nnodes;
         }
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
@@ -135,9 +136,11 @@ int main(int argc, char *argv[])
         {
             wio = ad.DeclareIO("writer");
             auto var = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
-                                       {1, nvp, l_nnodes, nmu});
+                                                  {1, nvp, l_nnodes, nmu});
             // add operator
-            var.AddOperation("mgardplus",{{"accuracy","0.01"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "0"}});
+            var.AddOperation(
+                "mgardplus",
+                {{"accuracy", "0.01"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "0"}});
             writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
 
             first = false;
