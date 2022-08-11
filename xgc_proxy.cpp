@@ -10,6 +10,8 @@
 #include "adios2.h"
 #include "mpi.h"
 
+#include <yaml-cpp/yaml.h>
+
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
 #define GET4D(X, d0, d1, d2, d3, i, j, k, l) X[(d1 + d2 + d3) * i + (d2 + d3) * j + d3 * k + l]
@@ -67,6 +69,15 @@ int main(int argc, char *argv[])
     // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
 
+    YAML::Node config = YAML::LoadFile("config.yaml");
+    std::map<std::string, std::string> parameters;
+    std::cout << "Operation parameters:" << std::endl;
+    for (YAML::const_iterator it = config.begin(); it != config.end(); ++it)
+    {
+        std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
+        parameters.insert({it->first.as<std::string>(), it->second.as<std::string>()});
+    }
+
     adios2::ADIOS ad(comm);
     adios2::IO io;
     adios2::Engine reader;
@@ -88,8 +99,9 @@ int main(int argc, char *argv[])
         auto var_i_f = io.InquireVariable<double>("i_f");
 
         nphi = var_i_f.Shape()[0];
-        //assert(("[WARN] Wrong number of MPI processes.", size == nphi * np_per_plane));
-        if ( size != nphi * np_per_plane) printf("[WARN] Wrong number of MPI processes: %d %d\n", size, nphi * np_per_plane);
+        // assert(("[WARN] Wrong number of MPI processes.", size == nphi * np_per_plane));
+        if (size != nphi * np_per_plane)
+            printf("[WARN] Wrong number of MPI processes: %d %d\n", size, nphi * np_per_plane);
         long unsigned int nvp = var_i_f.Shape()[1];
         long unsigned int nnodes = var_i_f.Shape()[2];
         long unsigned int nmu = var_i_f.Shape()[3];
@@ -139,9 +151,11 @@ int main(int argc, char *argv[])
             auto var = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                                   {1, nvp, l_nnodes, nmu});
             // add operator
-            var.AddOperation(
-                "mgardplus",
-                {{"accuracy", "0.01"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "1"}, {"train", "1"}});
+            // var.AddOperation("mgardplus", {{"accuracy", "0.01"},
+            //                                {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"},
+            //                                {"compression_method", "1"},
+            //                                {"train", "1"}});
+            var.AddOperation("mgardplus", parameters);
             writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
 
             first = false;
