@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     std::cout << "Operation parameters:" << std::endl;
     for (YAML::const_iterator it = config.begin(); it != config.end(); ++it)
     {
-        std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
+        if (rank == 0) std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
         parameters.insert({it->first.as<std::string>(), it->second.as<std::string>()});
     }
 
