@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     YAML::Node config = YAML::LoadFile("config.yaml");
     std::map<std::string, std::string> parameters;
-    std::cout << "Operation parameters:" << std::endl;
+    if (rank == 0) std::cout << "Operation parameters:" << std::endl;
     for (YAML::const_iterator it = config.begin(); it != config.end(); ++it)
     {
         if (rank == 0) std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
@@ -115,7 +115,8 @@ int main(int argc, char *argv[])
         {
             l_nnodes = user_nnodes;
             l_offset = plane_rank * l_nnodes;
-            nnodes = size * user_nnodes;
+            l_offset = 500000;
+            //nnodes = size * user_nnodes;
         }
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
