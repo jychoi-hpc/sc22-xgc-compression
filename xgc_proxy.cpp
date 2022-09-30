@@ -47,9 +47,10 @@ int main(int argc, char *argv[])
     int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
+    int ptype = atoi(argv[7]);
     int user_nnodes = 0; // user defined nnodes (optional)
-    if (argc > 7)
-        user_nnodes = atoi(argv[7]);
+    if (argc > 8)
+        user_nnodes = atoi(argv[8]);
 
     if (rank == 0)
     {
@@ -59,6 +60,7 @@ int main(int argc, char *argv[])
         printf("estep: %d\n", estep);
         printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
+        printf("species: %d\n", ptype);
         printf("user_nnodes: %d\n", user_nnodes);
     }
     MPI_Barrier(comm);
@@ -87,6 +89,7 @@ int main(int argc, char *argv[])
 
     io = ad.DeclareIO("reader");
 
+    const char* varname = ptype == 1 ? "i_f" : "e_f";
     char filename[50];
     for (int i = bstep; i < estep; i += inc)
     {
@@ -96,7 +99,7 @@ int main(int argc, char *argv[])
             printf("%d: Reading filename: %s\n", rank, filename);
 
         reader = io.Open(filename, adios2::Mode::Read, comm);
-        auto var_i_f = io.InquireVariable<double>("i_f");
+        auto var_i_f = io.InquireVariable<double>(varname);
 
         nphi = var_i_f.Shape()[0];
         // assert(("[WARN] Wrong number of MPI processes.", size == nphi * np_per_plane));
@@ -125,14 +128,6 @@ int main(int argc, char *argv[])
         reader.Get<double>(var_i_f, i_f);
         reader.Close();
 
-        /*
-        for (int i = 0; i < nvp; i++)
-            for (int j = 0; j < l_nnodes; j++)
-                for (int k = 0; k < nmu; k++)
-                    printf("%d: local i_f(\t%d,\t%d,\t%d\t) =\t%f\n", rank, i, j, k, GET3D(i_f, nvp, l_nnodes, nmu, i,
-        j, k)); break; break; break;
-        */
-
         // Step #2: Simulate computation
         int interval = 10;
         for (int k = sleep_sec; k > 0; k = k - interval)
@@ -144,18 +139,17 @@ int main(int argc, char *argv[])
 
         // Step #3: Write f-data
         if (rank == 0)
-            printf("%d: Writing: xgc.f0.bp\n", rank);
+            printf("%d: Writing: xgc.f0_%d.bp\n", rank, np_per_plane);
+        char output_fname[50];
+        sprintf(output_fname, "xgc.f0_%d.bp", np_per_plane);
         static bool first = true;
         if (first)
         {
             wio = ad.DeclareIO("writer");
-            auto var = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
-                                                  {1, nvp, l_nnodes, nmu});
+            auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
+                                   {1, nvp, l_nnodes, nmu});
             // add operator
-            // var.AddOperation("mgardplus", {{"accuracy", "0.01"},
-            //                                {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"},
-            //                                {"compression_method", "1"},
-            //                                {"train", "1"}});
+            // var.AddOperation("mgardplus",{{"accuracy", accu}, {"mode", "REL"}, {"s", "0"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"precision", "single"}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", "ion"}});
             var.AddOperation("mgardplus", parameters);
             writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
 
@@ -163,7 +157,7 @@ int main(int argc, char *argv[])
         }
 
         writer.BeginStep();
-        auto var = wio.InquireVariable<double>("i_f");
+        auto var = wio.InquireVariable<double>(varname);
         writer.Put<double>(var, i_f.data());
         writer.EndStep();
 
