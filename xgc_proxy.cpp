@@ -95,7 +95,8 @@ int main(int argc, char *argv[])
         auto var_i_f = io.InquireVariable<double>(varname);
 
         nphi = var_i_f.Shape()[0];
-        assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
+        //assert(("[WARN] Wrong number of MPI processes.", size == nphi * np_per_plane));
+        if ( size != nphi * np_per_plane) printf("[WARN] Wrong number of MPI processes: %d %d\n", size, nphi * np_per_plane);
         long unsigned int nvp = var_i_f.Shape()[1];
         long unsigned int nnodes = var_i_f.Shape()[2];
         long unsigned int nmu = var_i_f.Shape()[3];
