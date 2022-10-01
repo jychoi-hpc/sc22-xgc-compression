@@ -16,8 +16,8 @@ add_executable (adios_test adios_test.cpp)
 target_link_libraries (adios_test adios2::adios2 MPI::MPI_C)
 
 find_package(yaml-cpp REQUIRED)
-include_directories(${YAML_CPP_INCLUDE_DIRS})
+include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(xgc_proxy ${YAML_CPP_LIBRARIES})
 message(STATUS YAML_CPP_LIBRARIES ${YAML_CPP_LIBRARIES})
-message(STATUS YAML_CPP_INCLUDE_DIRS ${YAML_CPP_INCLUDE_DIRS})
+message(STATUS YAML_CPP_INCLUDE_DIRS ${YAML_CPP_INCLUDE_DIR})
 
