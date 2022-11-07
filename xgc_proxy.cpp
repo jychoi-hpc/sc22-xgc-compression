@@ -4,13 +4,12 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <cstring>
 
 #include <assert.h>
 
 #include "adios2.h"
 #include "mpi.h"
-
-#include <yaml-cpp/yaml.h>
 
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
@@ -47,10 +46,20 @@ int main(int argc, char *argv[])
     int estep = atoi(argv[4]);        // end step index
     int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
-    int ptype = atoi(argv[7]);
+    char* accu = argv[7];
+    int ptype = atoi(argv[8]);
+    char* precision = argv[9];
+    char* train_yes = argv[10];
+    char* use_pre = argv[11];
+    char* use_ddp = argv[12];
+    char* epochs = argv[13];
+    char* ae_error = argv[14];
+    char* pqbits = argv[15];
+    char* lr = argv[16];
+    char* decomp = argv[17];
     int user_nnodes = 0; // user defined nnodes (optional)
-    if (argc > 8)
-        user_nnodes = atoi(argv[8]);
+    if (argc > 18)
+        user_nnodes = atoi(argv[18]);
 
     if (rank == 0)
     {
@@ -60,25 +69,26 @@ int main(int argc, char *argv[])
         printf("estep: %d\n", estep);
         printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
+        printf("accuracy: %s\n", accu);
         printf("species: %d\n", ptype);
+        printf("precision: %s\n", precision);
+        printf("train: %s\n", train_yes);
+        printf("use_pre: %s\n", use_pre);
+        printf("use_ddp: %s\n", use_ddp);
+        printf("epochs: %s\n", epochs);
+        printf("ae_error: %s\n", ae_error);
+        printf("pqbits: %s\n", pqbits);
+        printf("learning rate: %s\n", lr);
+        printf("decomposition: %s\n", decomp);
         printf("user_nnodes: %d\n", user_nnodes);
     }
     MPI_Barrier(comm);
-
     long unsigned int nphi = 0;                   // number of planes (will be set after reading)
+    long unsigned int nplane_per_rank = 1;        // number of planes per rank
     long unsigned int iphi = rank / np_per_plane; // plane index
     int plane_rank = rank % np_per_plane;         // rank in plane
     // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
-
-    YAML::Node config = YAML::LoadFile("config.yaml");
-    std::map<std::string, std::string> parameters;
-    if (rank == 0) std::cout << "Operation parameters:" << std::endl;
-    for (YAML::const_iterator it = config.begin(); it != config.end(); ++it)
-    {
-        if (rank == 0) std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
-        parameters.insert({it->first.as<std::string>(), it->second.as<std::string>()});
-    }
 
     adios2::ADIOS ad(comm);
     adios2::IO io;
@@ -90,6 +100,7 @@ int main(int argc, char *argv[])
     io = ad.DeclareIO("reader");
 
     const char* varname = ptype == 1 ? "i_f" : "e_f";
+    const char* argname = ptype == 1 ? "ion" : "electron";
     char filename[50];
     for (int i = bstep; i < estep; i += inc)
     {
@@ -102,9 +113,7 @@ int main(int argc, char *argv[])
         auto var_i_f = io.InquireVariable<double>(varname);
 
         nphi = var_i_f.Shape()[0];
-        // assert(("[WARN] Wrong number of MPI processes.", size == nphi * np_per_plane));
-        if (size != nphi * np_per_plane)
-            printf("[WARN] Wrong number of MPI processes: %d %d\n", size, nphi * np_per_plane);
+        assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
         long unsigned int nvp = var_i_f.Shape()[1];
         long unsigned int nnodes = var_i_f.Shape()[2];
         long unsigned int nmu = var_i_f.Shape()[3];
@@ -113,16 +122,24 @@ int main(int argc, char *argv[])
         long unsigned int l_offset = plane_rank * l_nnodes;
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
+
+        if (!std::strcmp(decomp, "1")) { //  == 0) {
+            nplane_per_rank = nphi;        // number of planes per rank
+            iphi = 0;                      // plane index
+            l_nnodes = nnodes / size;
+            l_offset = rank * l_nnodes;
+            if (rank == size - 1) {
+                l_nnodes += nnodes % size;
+            }
+        }
         // use user-defined nnodes if specified
         if (user_nnodes > 0)
         {
             l_nnodes = user_nnodes;
             l_offset = plane_rank * l_nnodes;
-            l_offset = 500000;
-            //nnodes = size * user_nnodes;
+            nnodes = size * user_nnodes;
         }
-        // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
-        var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
+        var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
 
         std::vector<double> i_f;
         reader.Get<double>(var_i_f, i_f);
@@ -147,12 +164,11 @@ int main(int argc, char *argv[])
         {
             wio = ad.DeclareIO("writer");
             auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
-                                   {1, nvp, l_nnodes, nmu});
+                                   {nplane_per_rank, nvp, l_nnodes, nmu});
             // add operator
-            // var.AddOperation("mgardplus",{{"accuracy", accu}, {"mode", "REL"}, {"s", "0"}, {"meshfile", "exp-22012-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"precision", "single"}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", "ion"}});
-            var.AddOperation("mgardplus", parameters);
-            writer = wio.Open("xgc.f0.bp", adios2::Mode::Write, comm);
-
+            var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"prec", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits},{"lr",lr},{"leb","1e18"},{"ueb","1e22"},{"decomp",decomp}});
+            // var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "d3d_coarse_small_v2/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"precision", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_ae.pt"}, {"latent_dim", "5"}, {"batch_size", "128"}, {"train", "1"}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits}});
+            writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
         }
 
