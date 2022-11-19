@@ -57,9 +57,11 @@ int main(int argc, char *argv[])
     char* pqbits = argv[15];
     char* lr = argv[16];
     char* decomp = argv[17];
+    char* lbound = argv[18];
+    char* ubound = argv[19];
     int user_nnodes = 0; // user defined nnodes (optional)
-    if (argc > 18)
-        user_nnodes = atoi(argv[18]);
+    if (argc > 20)
+        user_nnodes = atoi(argv[20]);
 
     if (rank == 0)
     {
@@ -80,6 +82,8 @@ int main(int argc, char *argv[])
         printf("pqbits: %s\n", pqbits);
         printf("learning rate: %s\n", lr);
         printf("decomposition: %s\n", decomp);
+        printf("lbound: %s\n", lbound);
+        printf("ubound: %s\n", ubound);
         printf("user_nnodes: %d\n", user_nnodes);
     }
     MPI_Barrier(comm);
@@ -123,7 +127,15 @@ int main(int argc, char *argv[])
         if ((plane_rank % np_per_plane) == (np_per_plane - 1))
             l_nnodes = l_nnodes + nnodes % np_per_plane;
 
-        if (!std::strcmp(decomp, "1")) { //  == 0) {
+        // use user-defined nnodes if specified
+        if (user_nnodes > 0)
+        {
+            l_nnodes = user_nnodes;
+            l_offset = plane_rank * l_nnodes;
+            nnodes = size * user_nnodes;
+        }
+        int decomp_num = atoi(decomp);
+        if (decomp_num == 1 or decomp_num >= 5) { //  == 0) {
             nplane_per_rank = nphi;        // number of planes per rank
             iphi = 0;                      // plane index
             l_nnodes = nnodes / size;
@@ -131,13 +143,6 @@ int main(int argc, char *argv[])
             if (rank == size - 1) {
                 l_nnodes += nnodes % size;
             }
-        }
-        // use user-defined nnodes if specified
-        if (user_nnodes > 0)
-        {
-            l_nnodes = user_nnodes;
-            l_offset = plane_rank * l_nnodes;
-            nnodes = size * user_nnodes;
         }
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
 
@@ -166,7 +171,7 @@ int main(int argc, char *argv[])
             auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                    {nplane_per_rank, nvp, l_nnodes, nmu});
             // add operator
-            var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"prec", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits},{"lr",lr},{"leb","1e18"},{"ueb","1e22"},{"decomp",decomp}});
+            var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"prec", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits},{"lr",lr},{"leb",lbound},{"ueb",ubound},{"decomp",decomp}});
             // var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "d3d_coarse_small_v2/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"precision", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_ae.pt"}, {"latent_dim", "5"}, {"batch_size", "128"}, {"train", "1"}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits}});
             writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
