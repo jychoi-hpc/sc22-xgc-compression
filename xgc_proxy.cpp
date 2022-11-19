@@ -11,6 +11,8 @@
 #include "adios2.h"
 #include "mpi.h"
 
+#include <yaml-cpp/yaml.h>
+
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
 #define GET4D(X, d0, d1, d2, d3, i, j, k, l) X[(d1 + d2 + d3) * i + (d2 + d3) * j + d3 * k + l]
@@ -94,6 +96,23 @@ int main(int argc, char *argv[])
     // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
 
+    // Use yaml for extra parameters
+    std::map<std::string, std::string> params2;
+    try 
+    {
+        YAML::Node config = YAML::LoadFile("config.yaml");
+        if (rank == 0) std::cout << "Operation parameters:" << std::endl;
+        for (YAML::const_iterator it = config.begin(); it != config.end(); ++it)
+        {
+            if (rank == 0) std::cout << " " << it->first.as<std::string>() << ": " << it->second.as<std::string>() << std::endl;
+            params2.insert({it->first.as<std::string>(), it->second.as<std::string>()});
+        }
+    }
+    catch (...)
+    {
+        // do nothing
+    }
+
     adios2::ADIOS ad(comm);
     adios2::IO io;
     adios2::Engine reader;
@@ -170,8 +189,12 @@ int main(int argc, char *argv[])
             wio = ad.DeclareIO("writer");
             auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                    {nplane_per_rank, nvp, l_nnodes, nmu});
+            // make params
+            std::map<std::string, std::string> params = {{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"prec", precision}, {"latent_dim", "4"}, {"train", train_yes}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits},{"lr",lr},{"leb",lbound},{"ueb",ubound},{"decomp",decomp}};
+            params.insert(params2.begin(), params2.end());
+
             // add operator
-            var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"prec", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_iter.pt"}, {"latent_dim", "4"}, {"batch_size", "128"}, {"train", train_yes}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits},{"lr",lr},{"leb",lbound},{"ueb",ubound},{"decomp",decomp}});
+            var.AddOperation("mgardplus", params);
             // var.AddOperation("mgardplus",{{"tolerance", accu}, {"mode", "ABS"}, {"s", "0"}, {"meshfile", "d3d_coarse_small_v2/xgc.f0.mesh.bp"}, {"compression_method", "3"}, {"pq", "0"}, {"precision", precision}, {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_ae.pt"}, {"latent_dim", "5"}, {"batch_size", "128"}, {"train", "1"}, {"species", argname},{"use_ddp", use_ddp},{"use_pretrain", use_pre},{"nepoch", epochs},{"ae_thresh", ae_error},{"pqbits", pqbits}});
             writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
