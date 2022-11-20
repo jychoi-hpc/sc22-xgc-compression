@@ -163,6 +163,7 @@ int main(int argc, char *argv[])
                 l_nnodes += nnodes % size;
             }
         }
+        printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp, l_nnodes, nmu);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
 
         std::vector<double> i_f;
