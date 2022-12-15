@@ -224,25 +224,7 @@ int main(int argc, char *argv[])
             params.insert(params2.begin(), params2.end());
 
             // add operator
-            // var.AddOperation("mgardplus", params);
-            var.AddOperation("mgardplus",
-                             {{"tolerance", accu},
-                              {"mode", "ABS"},
-                              {"s", "0"},
-                              {"meshfile", "d3d_coarse_small_v2/xgc.f0.mesh.bp"},
-                              {"compression_method", "3"},
-                              {"pq", "0"},
-                              {"precision", precision},
-                              {"ae", "/gpfs/alpine/csc143/proj-shared/tania/sc22-xgc-compression/ae/my_ae.pt"},
-                              {"latent_dim", "5"},
-                              {"batch_size", "128"},
-                              {"train", "1"},
-                              {"species", argname},
-                              {"use_ddp", use_ddp},
-                              {"use_pretrain", use_pre},
-                              {"nepoch", epochs},
-                              {"ae_thresh", ae_error},
-                              {"pqbits", pqbits}});
+            var.AddOperation("mgardplus", params);
             writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
         }
