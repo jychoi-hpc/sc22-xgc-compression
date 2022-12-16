@@ -44,9 +44,9 @@ int main(int argc, char *argv[])
 
     std::string expdir = argv[1];
     int np_per_plane = atoi(argv[2]); // number of PEs per plane
-    int bstep = atoi(argv[3]);        // start step index
-    int estep = atoi(argv[4]);        // end step index
-    int inc = atoi(argv[5]);          // inc
+    // int bstep = atoi(argv[3]);        // start step index
+    // int estep = atoi(argv[4]);        // end step index
+    // int inc = atoi(argv[5]);          // inc
     int sleep_sec = atoi(argv[6]);
     char *accu = argv[7];
     int ptype = atoi(argv[8]);
@@ -69,9 +69,6 @@ int main(int argc, char *argv[])
     {
         printf("expdir: %s\n", expdir.data());
         printf("np_per_plane: %d\n", np_per_plane);
-        printf("bstep: %d\n", bstep);
-        printf("estep: %d\n", estep);
-        printf("inc: %d\n", inc);
         printf("sleep_sec: %d\n", sleep_sec);
         printf("accuracy: %s\n", accu);
         printf("species: %d\n", ptype);
@@ -93,7 +90,7 @@ int main(int argc, char *argv[])
     long unsigned int nplane_per_rank = 1;        // number of planes per rank
     long unsigned int iphi = rank / np_per_plane; // plane index
     int plane_rank = rank % np_per_plane;         // rank in plane
-    // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
+    printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
 
     // Use yaml for extra parameters
@@ -116,15 +113,12 @@ int main(int argc, char *argv[])
     }
 
     adios2::ADIOS ad(comm);
-    adios2::IO io;
-    adios2::Engine reader;
-
-    adios2::IO wio;
+    adios2::IO io = ad.DeclareIO("reader");
+    adios2::IO wio = ad.DeclareIO("writer");
     adios2::Engine writer;
 
     const char *varname = ptype == 1 ? "i_f" : "e_f";
     const char *argname = ptype == 1 ? "ion" : "electron";
-    char ioname[50];
     char filename[50];
     long unsigned int nvp = 0;
     long unsigned int nnodes = 0;
@@ -132,16 +126,24 @@ int main(int argc, char *argv[])
     long unsigned int l_nnodes = 0;
     long unsigned int l_offset = 0;
     static bool first = true;
-    for (int i = bstep; i < estep; i += inc)
+
+    sprintf(filename, "%s/restart_dir/xgc.f0.bp", expdir.data());
+    adios2::Engine reader = io.Open(filename, adios2::Mode::Read, comm);
+    // for (int i = bstep; i < estep; i += inc)
+    while (true)
     {
+        adios2::StepStatus read_status = reader.BeginStep(adios2::StepMode::Read, 0.0f);
+        if (read_status != adios2::StepStatus::OK)
+        {
+            break;
+        }
+
+        int istep = reader.CurrentStep();
+
         // Step #1: Read original XGC data
-        sprintf(filename, "%s/restart_dir/xgc.f0.%05d.bp", expdir.data(), i);
         if (rank == 0)
             printf("%d: Reading filename: %s\n", rank, filename);
 
-        sprintf(ioname, "reader%d", i);
-        io = ad.DeclareIO(ioname);
-        reader = io.Open(filename, adios2::Mode::Read, comm);
         adios2::Variable<double> var_i_f = io.InquireVariable<double>(varname);
 
         nphi = var_i_f.Shape()[0];
@@ -180,7 +182,8 @@ int main(int argc, char *argv[])
 
         std::vector<double> i_f;
         reader.Get<double>(var_i_f, i_f);
-        reader.Close();
+        // End adios2 step
+        reader.EndStep();
 
         // Step #2: Simulate computation
         int interval = 10;
@@ -198,7 +201,6 @@ int main(int argc, char *argv[])
         sprintf(output_fname, "xgc.f0_%d.bp", np_per_plane);
         if (first)
         {
-            wio = ad.DeclareIO("writer");
             auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                                   {nplane_per_rank, nvp, l_nnodes, nmu});
             // make params
@@ -235,9 +237,10 @@ int main(int argc, char *argv[])
         writer.EndStep();
 
         if (rank == 0)
-            printf("%d: Finished step %d\n", rank, i);
+            printf("%d: Finished step %d\n", rank, istep);
     }
 
+    reader.Close();
     writer.Close();
     MPI_Barrier(comm);
     MPI_Finalize();
