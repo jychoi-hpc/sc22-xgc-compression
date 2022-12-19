@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
     const char *varname = ptype == 1 ? "i_f" : "e_f";
     const char *argname = ptype == 1 ? "ion" : "electron";
     char filename[50];
+    char meshfile[1024];
     long unsigned int nvp = 0;
     long unsigned int nnodes = 0;
     long unsigned int nmu = 0;
@@ -204,10 +205,11 @@ int main(int argc, char *argv[])
             auto var = wio.DefineVariable<double>(varname, {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                                   {nplane_per_rank, nvp, l_nnodes, nmu});
             // make params
+            sprintf(meshfile, "%s/xgc.f0.mesh.bp", expdir.data());
             std::map<std::string, std::string> params = {{"tolerance", accu},
                                                          {"mode", "ABS"},
                                                          {"s", "0"},
-                                                         {"meshfile", "exp-22013-ITER/xgc.f0.mesh.bp"},
+                                                         {"meshfile", meshfile},
                                                          {"compression_method", "3"},
                                                          {"pq", "0"},
                                                          {"prec", precision},

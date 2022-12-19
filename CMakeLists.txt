@@ -6,8 +6,11 @@ find_package (MPI COMPONENTS CXX)
 find_package (ADIOS2 REQUIRED COMPONENTS CXX MPI)
 find_package (OpenMP)
 
-add_executable (xgc_proxy xgc_proxy.cpp)
-target_link_libraries (xgc_proxy adios2::adios2 MPI::MPI_C)
+add_executable (xgc_writer xgc_writer.cpp)
+target_link_libraries (xgc_writer adios2::adios2 MPI::MPI_C)
+
+add_executable (xgc_compress xgc_compress.cpp)
+target_link_libraries (xgc_compress adios2::adios2 MPI::MPI_C)
 
 add_executable (xgc_fdata_reader xgc_fdata_reader.cpp)
 target_link_libraries (xgc_fdata_reader adios2::adios2 MPI::MPI_C)
@@ -17,7 +20,7 @@ target_link_libraries (adios_test adios2::adios2 MPI::MPI_C)
 
 find_package(yaml-cpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
-target_link_libraries(xgc_proxy ${YAML_CPP_LIBRARIES})
+target_link_libraries(xgc_compress ${YAML_CPP_LIBRARIES})
 message(STATUS YAML_CPP_LIBRARIES ${YAML_CPP_LIBRARIES})
 message(STATUS YAML_CPP_INCLUDE_DIRS ${YAML_CPP_INCLUDE_DIR})
 
