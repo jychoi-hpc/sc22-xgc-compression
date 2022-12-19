@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     // for (int i = bstep; i < estep; i += inc)
     while (true)
     {
-        adios2::StepStatus read_status = reader.BeginStep(adios2::StepMode::Read, 0.0f);
+        adios2::StepStatus read_status = reader.BeginStep();
         if (read_status != adios2::StepStatus::OK)
         {
             break;
