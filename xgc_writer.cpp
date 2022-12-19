@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
     // printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
     MPI_Barrier(comm);
 
-    adios2::ADIOS ad(comm);
+    adios2::ADIOS ad("adios2cfg.xml", comm);
     adios2::IO io;
     adios2::Engine reader;
 
-    adios2::IO wio;
+    adios2::IO wio = ad.DeclareIO("f0");
     adios2::Engine writer;
 
 
@@ -124,7 +124,6 @@ int main(int argc, char *argv[])
         MPI_Barrier(comm);
         if (first)
         {
-            wio = ad.DeclareIO("writer");
             wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
 
