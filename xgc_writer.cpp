@@ -109,19 +109,9 @@ int main(int argc, char *argv[])
         j, k)); break; break; break;
         */
 
-        // Step #2: Simulate computation
-        int interval = 10;
-        for (int k = sleep_sec; k > 0; k = k - interval)
-        {
-            if (rank == 0)
-                printf("%d: Computation: %d seconds left.\n", rank, k);
-            std::this_thread::sleep_for(std::chrono::seconds(interval));
-        }
-
-        // Step #3: Write f-data
+        // Step #2: Write f-data
         if (rank == 0)
             printf("%d: Writing: xgc.f0.bp\n", rank);
-        MPI_Barrier(comm);
         if (first)
         {
             wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
@@ -130,13 +120,20 @@ int main(int argc, char *argv[])
             writer = wio.Open("restart_dir/xgc.f0.bp", adios2::Mode::Write, comm);
             first = false;
         }
-        MPI_Barrier(comm);
+
+        // Step #3: Simulate computation
+        int interval = 10;
+        for (int k = sleep_sec; k > 0; k = k - interval)
+        {
+            if (rank == 0)
+                printf("%d: Computation: %d seconds left.\n", rank, k);
+            std::this_thread::sleep_for(std::chrono::seconds(interval));
+        }
 
         writer.BeginStep();
         auto var = wio.InquireVariable<double>("i_f");
         writer.Put<double>(var, i_f.data());
         writer.EndStep();
-        MPI_Barrier(comm);
 
         if (rank == 0)
             printf("%d: Finished step %d\n", rank, i);
