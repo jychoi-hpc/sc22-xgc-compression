@@ -112,9 +112,9 @@ int main(int argc, char *argv[])
         // do nothing
     }
 
-    adios2::ADIOS ad(comm);
-    adios2::IO io = ad.DeclareIO("reader");
-    adios2::IO wio = ad.DeclareIO("writer");
+    adios2::ADIOS ad("adios2cfg.xml", comm);
+    adios2::IO io = ad.DeclareIO("f0");
+    adios2::IO wio = ad.DeclareIO("f0compress");
     adios2::Engine writer;
 
     const char *varname = ptype == 1 ? "i_f" : "e_f";
