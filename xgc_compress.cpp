@@ -168,7 +168,8 @@ int main(int argc, char *argv[])
         // Step #3: Write f-data
         if (rank == 0)
             printf("%d: Writing: xgc.f0_%d.bp\n", rank, np_per_plane);
-        char output_fname[50];
+        char output_fname[128];
+        char meshfile[128];
         sprintf(output_fname, "xgc.f0_%d.bp", np_per_plane);
         if (first)
         {
@@ -177,7 +178,7 @@ int main(int argc, char *argv[])
             auto var_e_f = wio.DefineVariable<double>("e_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                                       {nplane_per_rank, nvp, l_nnodes, nmu});
             // make params
-            // sprintf(meshfile, "%s/xgc.f0.mesh.bp", expdir.data());
+            sprintf(meshfile, "%s/xgc.f0.mesh.bp", expdir.data());
             // std::map<std::string, std::string> params = {{"tolerance", accu},
             //                                              {"mode", "ABS"},
             //                                              {"s", "0"},
@@ -198,7 +199,7 @@ int main(int argc, char *argv[])
             //                                              {"leb", lbound},
             //                                              {"ueb", ubound},
             //                                              {"decomp", decomp}};
-            std::map<std::string, std::string> extra = {{"species", "ion"}};
+            std::map<std::string, std::string> extra = {{"species", "ion"}, {"meshfile", meshfile}};
             params.insert(extra.begin(), extra.end());
 
             // add operator
