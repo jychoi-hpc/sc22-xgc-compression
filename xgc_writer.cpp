@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
         io = ad.DeclareIO(ioname);
         reader = io.Open(filename, adios2::Mode::Read, comm);
         auto var_i_f = io.InquireVariable<double>("i_f");
+        auto var_e_f = io.InquireVariable<double>("e_f");
 
         nphi = var_i_f.Shape()[0];
         assert(("Wrong number of MPI processes.", size == nphi * np_per_plane));
@@ -96,9 +97,12 @@ int main(int argc, char *argv[])
             l_nnodes = l_nnodes + nnodes % np_per_plane;
         // printf("%d: iphi, l_offset, l_nnodes:\t%d\t%d\t%d\n", rank, iphi, l_offset, l_nnodes);
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
+        var_e_f.SetSelection({{iphi, 0, l_offset, 0}, {1, nvp, l_nnodes, nmu}});
 
         std::vector<double> i_f;
+        std::vector<double> e_f;
         reader.Get<double>(var_i_f, i_f);
+        reader.Get<double>(var_e_f, e_f);
         reader.Close();
 
         /*
@@ -116,6 +120,8 @@ int main(int argc, char *argv[])
         {
             wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
+            wio.DefineVariable<double>("e_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
+                                       {1, nvp, l_nnodes, nmu});
 
             writer = wio.Open("restart_dir/xgc.f0.bp", adios2::Mode::Write, comm);
             first = false;
@@ -131,8 +137,10 @@ int main(int argc, char *argv[])
         }
 
         writer.BeginStep();
-        auto var = wio.InquireVariable<double>("i_f");
-        writer.Put<double>(var, i_f.data());
+        auto var_i = wio.InquireVariable<double>("i_f");
+        auto var_e = wio.InquireVariable<double>("e_f");
+        writer.Put<double>(var_i, i_f.data());
+        writer.Put<double>(var_e, e_f.data());
         writer.EndStep();
 
         if (rank == 0)
