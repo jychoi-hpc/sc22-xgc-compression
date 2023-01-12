@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
             printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp,
                    l_nnodes, nmu);
             var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
+            var_e_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
         }
 
         if (rank == 0)
@@ -199,10 +200,11 @@ int main(int argc, char *argv[])
             //                                              {"leb", lbound},
             //                                              {"ueb", ubound},
             //                                              {"decomp", decomp}};
-            std::map<std::string, std::string> extra = {{"species", "ion"}, {"meshfile", meshfile}};
+            std::map<std::string, std::string> extra = {{"meshfile", meshfile}};
             params.insert(extra.begin(), extra.end());
 
             // add operator
+            params["species"] = "ion";
             var_i_f.AddOperation(compname, params);
             params["species"] = "electron";
             var_e_f.AddOperation(compname, params);
@@ -211,10 +213,10 @@ int main(int argc, char *argv[])
         }
 
         writer.BeginStep();
-        auto var_i_f2 = wio.InquireVariable<double>("i_f");
-        auto var_e_f2 = wio.InquireVariable<double>("e_f");
-        writer.Put<double>(var_i_f2, i_f.data());
-        writer.Put<double>(var_e_f2, e_f.data());
+        auto var_i = wio.InquireVariable<double>("i_f");
+        auto var_e = wio.InquireVariable<double>("e_f");
+        writer.Put<double>(var_i, i_f.data());
+        writer.Put<double>(var_e, e_f.data());
         writer.EndStep();
 
         if (rank == 0)
