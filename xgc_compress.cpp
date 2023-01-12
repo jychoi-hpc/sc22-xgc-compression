@@ -21,7 +21,7 @@
 
 static void show_usage(std::string name)
 {
-    std::cerr << "Usage: " << name << " EXPDIR" << std::endl;
+    std::cerr << "Usage: " << name << " expdir method" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     if (rank == 0)
         printf("rank,comm_size: %d %d\n", rank, comm_size);
 
-    if (argc < 2)
+    if (argc < 3)
     {
         if (rank == 0)
             show_usage(argv[0]);
@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
     }
 
     std::string expdir = argv[1];
+    std::string compname = argv[2];
 
     if (rank == 0)
         printf("expdir: %s\n", expdir.data());
@@ -201,9 +202,9 @@ int main(int argc, char *argv[])
             params.insert(extra.begin(), extra.end());
 
             // add operator
-            var_i_f.AddOperation("mgardplus", params);
+            var_i_f.AddOperation(compname, params);
             params["species"] = "electron";
-            var_e_f.AddOperation("mgardplus", params);
+            var_e_f.AddOperation(compname, params);
             writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
         }
