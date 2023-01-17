@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
         int istep = reader.CurrentStep();
 
         adios2::Variable<double> var_i_f = io.InquireVariable<double>("i_f");
-        adios2::Variable<double> var_e_f = io.InquireVariable<double>("e_f");
+        // adios2::Variable<double> var_e_f = io.InquireVariable<double>("e_f");
 
         if (first)
         {
@@ -145,15 +145,15 @@ int main(int argc, char *argv[])
             printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp,
                    l_nnodes, nmu);
             var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
-            var_e_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
+            // var_e_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
         }
 
         if (rank == 0)
             printf("%d: Reading step: %d\n", rank, istep);
         std::vector<double> i_f;
-        std::vector<double> e_f;
+        // std::vector<double> e_f;
         reader.Get<double>(var_i_f, i_f);
-        reader.Get<double>(var_e_f, e_f);
+        // reader.Get<double>(var_e_f, e_f);
         // End of adios2 read step
         reader.EndStep();
 
@@ -176,8 +176,8 @@ int main(int argc, char *argv[])
         {
             auto var_i_f = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                                       {nplane_per_rank, nvp, l_nnodes, nmu});
-            auto var_e_f = wio.DefineVariable<double>("e_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
-                                                      {nplane_per_rank, nvp, l_nnodes, nmu});
+            // auto var_e_f = wio.DefineVariable<double>("e_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
+                                                    //   {nplane_per_rank, nvp, l_nnodes, nmu});
             // make params
             sprintf(meshfile, "%s/xgc.f0.mesh.bp", expdir.data());
             // std::map<std::string, std::string> params = {{"tolerance", accu},
@@ -206,17 +206,17 @@ int main(int argc, char *argv[])
             // add operator
             params["species"] = "ion";
             var_i_f.AddOperation(compname, params);
-            params["species"] = "electron";
-            var_e_f.AddOperation(compname, params);
+            // params["species"] = "electron";
+            // var_e_f.AddOperation(compname, params);
             writer = wio.Open(output_fname, adios2::Mode::Write, comm);
             first = false;
         }
 
         writer.BeginStep();
         auto var_i = wio.InquireVariable<double>("i_f");
-        auto var_e = wio.InquireVariable<double>("e_f");
+        // auto var_e = wio.InquireVariable<double>("e_f");
         writer.Put<double>(var_i, i_f.data());
-        writer.Put<double>(var_e, e_f.data());
+        // writer.Put<double>(var_e, e_f.data());
         writer.EndStep();
 
         if (rank == 0)
