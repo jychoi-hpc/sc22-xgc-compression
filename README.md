@@ -5,7 +5,7 @@ This is to demostrate XGC data compression workflow.
 ```
           adios        adios
           write        read
-        XGC -> xgc.f0.bp -> xgc_compression
+        XGC -> xgc.f0.bp -> xgc_compress
 (N processes)                (M processes)
 ```
 
@@ -13,10 +13,10 @@ This is to demostrate XGC data compression workflow.
 
 ```
 cat << EOF > params.yaml
-tolerance: 1e18
+tolerance: 1e16
 mode: ABS
 s: 0
-compression_method: 3
+compression_method: 0
 pq: 0
 prec: single
 latent_dim: 4
