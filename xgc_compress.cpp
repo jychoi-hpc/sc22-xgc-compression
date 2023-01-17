@@ -222,6 +222,7 @@ int main(int argc, char *argv[])
             printf("%d: Finished step %d\n", rank, istep);
     }
 
+    printf("%d: All done.\n", rank);
     reader.Close();
     writer.Close();
     MPI_Barrier(comm);
