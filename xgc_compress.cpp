@@ -110,10 +110,11 @@ int main(int argc, char *argv[])
         {
             nphi = var_i_f.Shape()[0];        // number of planes
             np_per_plane = comm_size / nphi;  // number of PEs per plane
+            if (np_per_plane < 1) np_per_plane = 1; // for debugging
             nplane_per_rank = 1;              // number of planes per rank
             iphi = rank / np_per_plane;       // plane index
             plane_rank = rank % np_per_plane; // rank in plane
-            assert(("Wrong number of MPI processes.", comm_size == nphi * np_per_plane));
+            // assert(("Wrong number of MPI processes.", comm_size == nphi * np_per_plane));
 
             printf("%d: iphi, plane_rank:\t%d\t%d\n", rank, iphi, plane_rank);
             MPI_Barrier(comm);
@@ -142,6 +143,8 @@ int main(int argc, char *argv[])
                     l_nnodes += nnodes % comm_size;
                 }
             }
+            if (comm_size == 1) l_nnodes = 10000; // for debugging
+            if (comm_size == 1) nplane_per_rank = 1; // for debugging
             printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp, l_nnodes, nmu);
         }
         var_i_f.SetSelection({{iphi, 0, l_offset, 0}, {nplane_per_rank, nvp, l_nnodes, nmu}});
