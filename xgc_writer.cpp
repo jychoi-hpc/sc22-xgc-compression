@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 
         // Step #2: Write f-data
         if (rank == 0)
-            printf("%d: Writing: xgc.f0.bp\n", rank);
+            printf("%d: Writing: xgc.f0.bp.000.bp\n", rank);
         if (first)
         {
             wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
             wio.DefineVariable<double>("e_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
                                        {1, nvp, l_nnodes, nmu});
 
-            writer = wio.Open("restart_dir/xgc.f0.bp", adios2::Mode::Write, comm);
+            writer = wio.Open("restart_dir/xgc.f0.bp.000.bp", adios2::Mode::Write, comm);
             first = false;
         }
 

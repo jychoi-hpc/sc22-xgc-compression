@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         // do nothing
     }
 
-    sprintf(filename, "%s/restart_dir/xgc.f0.bp", expdir.data());
+    sprintf(filename, "%s/restart_dir/xgc.f0.bp.000.bp", expdir.data());
     if (rank == 0)
         printf("%d: Reading filename: %s\n", rank, filename);
     adios2::Engine reader = io.Open(filename, adios2::Mode::Read, comm);
