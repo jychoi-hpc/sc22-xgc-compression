@@ -12,6 +12,8 @@
 #include "mpi.h"
 
 #include <yaml-cpp/yaml.h>
+#include <gptl.h>
+#include <gptlmpi.h>
 
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
@@ -47,7 +49,10 @@ int main(int argc, char *argv[])
 
     if (rank == 0)
         printf("expdir: %s\n", expdir.data());
+    
+    GPTLinitialize();
     MPI_Barrier(comm);
+
     long unsigned int nphi = 0;            // number of planes (will be set after reading)
     long unsigned int nplane_per_rank = 0; // number of planes per rank
     long unsigned int iphi = 0;            // plane index
@@ -154,10 +159,12 @@ int main(int argc, char *argv[])
             printf("%d: Reading step: %d\n", rank, istep);
         std::vector<double> i_f;
         std::vector<double> e_f;
+        GPTLstart("adios_read");
         reader.Get<double>(var_i_f, i_f);
         reader.Get<double>(var_e_f, e_f);
         // End of adios2 read step
         reader.EndStep();
+        GPTLstop("adios_read");
 
         // Step #2: Simulate computation
         // int interval = 10;
@@ -217,9 +224,16 @@ int main(int argc, char *argv[])
         writer.BeginStep();
         auto var_i = wio.InquireVariable<double>("i_f");
         auto var_e = wio.InquireVariable<double>("e_f");
+        GPTLstart("adios_write");
         writer.Put<double>(var_i, i_f.data());
         writer.Put<double>(var_e, e_f.data());
         writer.EndStep();
+        GPTLstop("adios_write");
+
+        char fname[80];
+        sprintf(fname, "xgc_compress-timing.%d.txt", rank);
+        GPTLpr_file(fname);
+        GPTLpr_summary_file(MPI_COMM_WORLD, "xgc_compress-timing.summary.txt");
 
         if (rank == 0)
             printf("%d: Finished step %d\n", rank, istep);
