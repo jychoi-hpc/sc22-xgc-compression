@@ -14,6 +14,7 @@
 #include <yaml-cpp/yaml.h>
 #include <gptl.h>
 #include <gptlmpi.h>
+#include <papi.h>
 
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
@@ -50,6 +51,13 @@ int main(int argc, char *argv[])
     if (rank == 0)
         printf("expdir: %s\n", expdir.data());
     
+    int ret;
+    int code;
+    //ret = GPTLsetoption (GPTL_IPC, 1);     // Count instructions per cycle
+    //ret = GPTLsetoption (PAPI_TOT_INS, 1); // Print total instructions
+    //ret = GPTLevent_name_to_code("example:::EXAMPLE_CONSTANT", &code);
+    //ret = GPTLevent_name_to_code("nvml:::Tesla_V100-SXM2-16GB:device_0:gpu_utilization", &code);
+    //ret = GPTLsetoption (code, 1);
     GPTLinitialize();
     MPI_Barrier(comm);
 
@@ -96,8 +104,8 @@ int main(int argc, char *argv[])
         printf("%d: Reading filename: %s\n", rank, filename);
     adios2::Engine reader = io.Open(filename, adios2::Mode::Read, comm);
 
-    // for (int i = bstep; i < estep; i += inc)
-    while (true)
+    for (int i = 0; i < 3; i += 1)
+    //while (true)
     {
         // Step #1: Read XGC data in step
         adios2::StepStatus read_status = reader.BeginStep();
@@ -148,7 +156,7 @@ int main(int argc, char *argv[])
                     l_nnodes += nnodes % comm_size;
                 }
             }
-            if (comm_size == 1) l_nnodes = 10000; // for debugging
+            if (comm_size == 1) l_nnodes =  10000; //1117528/24; // for debugging
             if (comm_size == 1) nplane_per_rank = 1; // for debugging
             printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp, l_nnodes, nmu);
         }
