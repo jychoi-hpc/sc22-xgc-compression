@@ -16,6 +16,10 @@
 #include <gptlmpi.h>
 #include <papi.h>
 
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+
 #define GET2D(X, d0, d1, i, j) X[d1 * i + j]
 #define GET3D(X, d0, d1, d2, i, j, k) X[(d1 + d2) * i + d2 * j + k]
 #define GET4D(X, d0, d1, d2, d3, i, j, k, l) X[(d1 + d2 + d3) * i + (d2 + d3) * j + d3 * k + l]
@@ -38,15 +42,27 @@ int main(int argc, char *argv[])
     if (rank == 0)
         printf("rank,comm_size: %d %d\n", rank, comm_size);
 
-    if (argc < 3)
+    std::string expdir = "./";
+    std::string compname = "null";
+    int maxstep = 0;
+
+    // Optional arguments
+    po::options_description desc("Allowed options");    
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("expdir,w", po::value(&expdir), "XGC directory")
+        ("compname,c", po::value(&compname), "compression method")
+        ("maxstep,s", po::value<int>(&maxstep)->default_value(1000), "max steps");
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help"))
     {
-        if (rank == 0)
-            show_usage(argv[0]);
+        std::cout << desc << "\n";
         return 1;
     }
-
-    std::string expdir = argv[1];
-    std::string compname = argv[2];
 
     if (rank == 0)
         printf("expdir: %s\n", expdir.data());
