@@ -120,8 +120,7 @@ int main(int argc, char *argv[])
         printf("%d: Reading filename: %s\n", rank, filename);
     adios2::Engine reader = io.Open(filename, adios2::Mode::Read, comm);
 
-    for (int i = 0; i < 3; i += 1)
-    //while (true)
+    for (int i = 0; i < maxstep; i += 1)
     {
         // Step #1: Read XGC data in step
         adios2::StepStatus read_status = reader.BeginStep();
