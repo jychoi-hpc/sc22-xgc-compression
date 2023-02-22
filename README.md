@@ -32,7 +32,17 @@ ueb: -1
 decomp: 0
 EOF
 
-jsrun -n192 -c7 -g1 -r6 -brs xgc_compression /dir/to/xgc mgardplus
+jsrun -n192 -c7 -g1 -r6 -brs xgc_compression -w /dir/to/xgc -c mgardplus
 ```
 Note: 
 * Use params.yaml for MGARDPlus parameters
+
+## Command line options
+```
+$ ./xgc_compress -h
+Allowed options:
+  -h [ --help ]                produce help message
+  -w [ --expdir ] arg          XGC directory
+  -c [ --compname ] arg        compression method
+  -s [ --maxstep ] arg (=1000) max steps
+```
