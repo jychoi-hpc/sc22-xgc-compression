@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
     std::string compname = "null";
     std::string f0basename = "restart_dir/xgc.f0.bp.000.bp";
     int maxstep = 0;
+    int user_nnodes = 1000;
 
     // Optional arguments
     po::options_description desc("Allowed options");    
@@ -54,7 +55,8 @@ int main(int argc, char *argv[])
         ("expdir,w", po::value(&expdir), "XGC directory")
         ("filename,f", po::value(&f0basename), "f0 filename")
         ("compname,c", po::value(&compname), "compression method")
-        ("maxstep,s", po::value<int>(&maxstep)->default_value(1000), "max steps");
+        ("maxstep,s", po::value<int>(&maxstep)->default_value(1000), "max steps")
+        ("nnodes,n", po::value<int>(&user_nnodes)->default_value(1000), "user nnodes");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -173,7 +175,7 @@ int main(int argc, char *argv[])
                     l_nnodes += nnodes % comm_size;
                 }
             }
-            if (comm_size == 1) l_nnodes =  10000; //1117528/24; // for debugging
+            if (comm_size == 1) l_nnodes =  user_nnodes; // for debugging
             if (comm_size == 1) nplane_per_rank = 1; // for debugging
             printf("%d: Selection: (%d %d %d %d) (%d %d %d %d)\n", rank, iphi, 0, l_offset, 0, nplane_per_rank, nvp, l_nnodes, nmu);
         }
@@ -246,6 +248,16 @@ int main(int argc, char *argv[])
             first = false;
         }
 
+        // Debugging: skip the first step
+        /*
+        if (i == 0) {
+            if (rank == 0)
+                printf("%d: Skip: %d\n", rank, i);
+            GPTLreset();
+            continue;
+        }
+        */
+
         writer.BeginStep();
         auto var_i = wio.InquireVariable<double>("i_f");
         auto var_e = wio.InquireVariable<double>("e_f");
@@ -256,12 +268,17 @@ int main(int argc, char *argv[])
         GPTLstop("adios_write");
 
         char fname[80];
-        sprintf(fname, "xgc_compress-timing.%d.txt", rank);
-        GPTLpr_file(fname);
-        GPTLpr_summary_file(MPI_COMM_WORLD, "xgc_compress-timing.summary.txt");
+        if (rank == 0) {
+            sprintf(fname, "xgc_compress-timing-p%d-%d.txt", rank, i);
+            GPTLpr_file(fname);
+        }
+        sprintf(fname, "xgc_compress-timing-sumary-%d.txt", i);
+        GPTLpr_summary_file(MPI_COMM_WORLD, fname);
 
         if (rank == 0)
             printf("%d: Finished step %d\n", rank, istep);
+        // reset at each iteration
+        GPTLreset();
     }
 
     printf("%d: All done.\n", rank);
