@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 
     std::string expdir = "./";
     std::string compname = "null";
+    std::string f0basename = "restart_dir/xgc.f0.bp.000.bp";
     int maxstep = 0;
 
     // Optional arguments
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("help,h", "produce help message")
         ("expdir,w", po::value(&expdir), "XGC directory")
+        ("filename,f", po::value(&f0basename), "f0 filename")
         ("compname,c", po::value(&compname), "compression method")
         ("maxstep,s", po::value<int>(&maxstep)->default_value(1000), "max steps");
 
@@ -115,7 +117,7 @@ int main(int argc, char *argv[])
         // do nothing
     }
 
-    sprintf(filename, "%s/restart_dir/xgc.f0.bp.000.bp", expdir.data());
+    sprintf(filename, "%s/%s", expdir.data(), f0basename.data());
     if (rank == 0)
         printf("%d: Reading filename: %s\n", rank, filename);
     adios2::Engine reader = io.Open(filename, adios2::Mode::Read, comm);
