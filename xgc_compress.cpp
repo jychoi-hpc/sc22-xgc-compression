@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     std::string expdir = "./";
     std::string compname = "null";
     std::string f0basename = "restart_dir/xgc.f0.bp.000.bp";
-    std::string outfile = "restart_dir/xgc.f0.rewrite.bp";
+    std::string outfile = "restart_dir/xgc.f0.out.bp";
     int maxstep = 0;
     int user_nnodes = 1000;
 
