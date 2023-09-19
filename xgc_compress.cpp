@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
     std::string expdir = "./";
     std::string compname = "null";
     std::string f0basename = "restart_dir/xgc.f0.bp.000.bp";
+    std::string outfile = "restart_dir/xgc.f0.rewrite.bp";
     int maxstep = 0;
     int user_nnodes = 1000;
 
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
         ("help,h", "produce help message")
         ("expdir,w", po::value(&expdir), "XGC directory")
         ("filename,f", po::value(&f0basename), "f0 filename")
+        ("output,o", po::value(&outfile), "f0 output")
         ("compname,c", po::value(&compname), "compression method")
         ("maxstep,s", po::value<int>(&maxstep)->default_value(1000), "max steps")
         ("nnodes,n", po::value<int>(&user_nnodes)->default_value(1000), "user nnodes");
@@ -204,10 +206,8 @@ int main(int argc, char *argv[])
 
         // Step #3: Write f-data
         if (rank == 0)
-            printf("%d: Writing: xgc.f0_%d.bp\n", rank, np_per_plane);
-        char output_fname[128];
+            printf("%d: Writing: %s\n", rank, outfile.c_str());
         char meshfile[128];
-        sprintf(output_fname, "xgc.f0_%d.bp", np_per_plane);
         if (first)
         {
             auto var_i_f = wio.DefineVariable<double>("i_f", {nphi, nvp, nnodes, nmu}, {iphi, 0, l_offset, 0},
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
             var_i_f.AddOperation(compname, params);
             params["species"] = "electron";
             var_e_f.AddOperation(compname, params);
-            writer = wio.Open(output_fname, adios2::Mode::Write, comm);
+            writer = wio.Open(outfile.c_str(), adios2::Mode::Write, comm);
             first = false;
         }
 
